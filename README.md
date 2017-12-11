@@ -111,7 +111,152 @@ EOF
 First create an Envoy config that will act as a Back End proxy server:
 
 
-**Step 4: Start all containers**
+```json
+{
+  "listeners": [
+    {
+      "address": "tcp://0.0.0.0:80",
+      "filters": [
+        {
+          "name": "http_connection_manager",
+          "config": {
+            "codec_type": "auto",
+            "stat_prefix": "ingress_http",
+            "route_config": {
+              "virtual_hosts": [
+                {
+                  "name": "app",
+                  "domains": ["*"],
+                  "routes": [
+                    {
+                      "timeout_ms": 0,
+                      "prefix": "/",
+                      "cluster": "local_service"
+                    }
+                  ]
+                }
+              ]
+            },
+            "filters": [
+              {
+                "name": "router",
+                "config": {}
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "admin": {
+    "access_log_path": "/dev/null",
+    "address": "tcp://0.0.0.0:8001"
+  },
+  "cluster_manager": {
+    "clusters": [
+      {
+        "name": "local_service",
+        "connect_timeout_ms": 250,
+        "type": "strict_dns",
+        "lb_type": "round_robin",
+        "hosts": [
+          {
+            "url": "tcp://127.0.0.1:8080"
+          }
+        ]
+      }
+    ]
+  }
+}
+
+```
+
+**Step 6 Add Dockerfile for BackEnd Envoy Gateway**
+
+```bash
+$ touch DockerFile
+$ cat <<EOF > DockerFile
+    FROM envoyproxy/envoy:latest
+    
+    ARG PIP_REQUIREMENTS_FILE=requirements.txt
+
+    RUN apt-get update && apt-get -q install -y \
+        curl \
+        software-properties-common \
+        python-software-properties
+    RUN add-apt-repository ppa:deadsnakes/ppa
+    RUN apt-get update && apt-get -q install -y \
+        python3 \
+        python3-pip
+    RUN python3 --version && pip3 --version
+    
+    RUN mkdir /code
+    COPY . /code
+    WORKDIR /code
+    
+    RUN pip3 install -r $PIP_REQUIREMENTS_FILE
+    ADD ./start_service.sh /usr/local/bin/start_service.sh
+    RUN chmod u+x /usr/local/bin/start_service.sh
+    ENTRYPOINT /usr/local/bin/start_service.sh
+EOF
+```
+
+add also a start up shell for your app
+
+```bash
+$ touch start_service.sh
+$ cat <<EOF > start_service.sh
+    #!/bin/bash
+    set -e
+    python3 /code/app.py &
+    envoy -c /etc/search-service-envoy.json --service-cluster service${SERVICE_NAME}
+EOF
+
+```
+
+**Step 7 Add docker-compose script for setting up all containers**
+
+```bash
+$ touch docker-compose.yml
+cat<<EOF > docker-compose.yml
+version: '2'
+services:
+
+  front-envoy:
+    build:
+      context: .
+      dockerfile: app/DockerFile
+    volumes:
+      - ./gateway/front-proxy-envoy.json:/etc/front-proxy-envoy.json
+    networks:
+      - envoymesh
+    expose:
+      - "80"
+      - "8001"
+    ports:
+      - "8000:80"
+      - "8001:8001"
+
+  app:
+    build: ./app
+    volumes:
+      - ./src/app-service-envoy.json:/etc/app-service-envoy.json
+    networks:
+      envoymesh:
+        aliases:
+          - app
+    environment:
+      - SERVICE_NAME=app
+    expose:
+      - "80"
+
+networks:
+  envoymesh: {}
+EOF
+```
+
+
+**Step 10: Start all containers**
 
 ```bash
 $ docker-compose up --build -d

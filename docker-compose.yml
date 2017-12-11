@@ -1,0 +1,33 @@
+version: '2'
+services:
+
+  front-envoy:
+    build:
+      context: .
+      dockerfile: app/DockerFile
+    volumes:
+      - ./gateway/front-proxy-envoy.json:/etc/front-proxy-envoy.json
+    networks:
+      - envoymesh
+    expose:
+      - "80"
+      - "8001"
+    ports:
+      - "8000:80"
+      - "8001:8001"
+
+  app:
+    build: ./app
+    volumes:
+      - ./src/app-service-envoy.json:/etc/app-service-envoy.json
+    networks:
+      envoymesh:
+        aliases:
+          - app
+    environment:
+      - SERVICE_NAME=app
+    expose:
+      - "80"
+
+networks:
+  envoymesh: {}
