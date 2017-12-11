@@ -209,7 +209,7 @@ $ cat <<EOF > start_service.sh
     #!/bin/bash
     set -e
     python3 /code/app.py &
-    envoy -c /etc/search-service-envoy.json --service-cluster service${SERVICE_NAME}
+    envoy -c /etc/app-service-envoy.json --service-cluster service ${SERVICE_NAME}
 EOF
 
 ```
