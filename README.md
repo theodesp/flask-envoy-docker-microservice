@@ -255,6 +255,91 @@ networks:
 EOF
 ```
 
+**Step 8: Add requirements.txt and flask app**
+Create the basic flask micro-service and add the following code.
+
+```bash
+$ touch requirements.txt
+$ cat<<EOF > requirements.txt
+Flask==0.12.2
+gunicorn==18.0
+python-dotenv==0.7.1
+EOF
+
+$ touch app.py
+
+```
+
+*app.py*
+```python
+from flask import Flask
+import settings
+
+
+def init():
+    """ Create a Flask app. """
+    server = Flask(__name__)
+
+    return server
+
+app = init()
+
+
+@app.route('/')
+def index():
+    return 'My awesome micro-service'
+
+if __name__ == "__main__":
+    app.run(
+        host=settings.API_BIND_HOST,
+        port=settings.API_BIND_PORT,
+        debug=settings.DEBUG)
+```
+
+*settings.py*
+```python
+"""
+Settings file, which is populated from the environment while enforcing common
+use-case defaults.
+"""
+import os
+from os.path import join, dirname
+from dotenv import load_dotenv
+
+dotenv_path = join(dirname(__file__), '.env')
+load_dotenv(dotenv_path)
+
+# OR, the same with increased verbosity:
+load_dotenv(dotenv_path, verbose=True)
+
+
+DEBUG = True
+if os.getenv('DEBUG', '').lower() in ['0', 'no', 'false']:
+    DEBUG = False
+
+API_BIND_HOST = os.getenv('SERVICE_API_HOST', '127.0.0.1')
+API_BIND_PORT = int(os.getenv('SERVICE_API_PORT', 8080))
+SERVICE_NAME = os.getenv('SERVICE_NAME', 'app')
+
+```
+
+**Step 9: Test the service locally**
+```bash
+$ python app.py                                       
+ * Running on http://127.0.0.1:8080/ (Press CTRL+C to quit)
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 185-774-130
+
+```
+
+and in another terminal
+
+```bash
+$ curl http://127.0.0.1:8080/
+My awesome micro-service%                 
+```
+
 
 **Step 10: Start all containers**
 
