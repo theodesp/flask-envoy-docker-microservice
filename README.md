@@ -111,7 +111,8 @@ EOF
 ```
 
 **Step 5: Create configuration for Back End Envoy Proxy Server**
-First create an Envoy config that will act as a Back End proxy server:
+First create an Envoy config that will act as a Back End proxy server. Make sure you match the listener address to the 
+hosts address of the front-end proxy.
 
 
 ```json
@@ -177,7 +178,7 @@ First create an Envoy config that will act as a Back End proxy server:
 
 ```
 
-**Step 6 Add Dockerfile for Backend Envoy Gateway**
+**Step 6: Add Dockerfile for Backend Envoy Gateway**
 
 ```bash
 $ touch DockerFile
@@ -219,7 +220,7 @@ EOF
 
 ```
 
-**Step 7 Add docker-compose script for setting up all containers**
+**Step 7: Add docker-compose script for setting up all containers**
 
 ```bash
 $ touch docker-compose.yml
