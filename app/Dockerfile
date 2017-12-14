@@ -1,6 +1,5 @@
 FROM envoyproxy/envoy:latest
 
-ARG PIP_REQUIREMENTS_FILE=requirements.txt
 
 RUN apt-get update && apt-get -q install -y \
     curl \
@@ -16,7 +15,8 @@ RUN mkdir /code
 COPY . /code
 WORKDIR /code
 
-RUN pip3 install -r $PIP_REQUIREMENTS_FILE
+RUN pip3 install -r ./requirements.txt
 ADD ./start_service.sh /usr/local/bin/start_service.sh
 RUN chmod u+x /usr/local/bin/start_service.sh
+
 ENTRYPOINT /usr/local/bin/start_service.sh

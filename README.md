@@ -46,7 +46,9 @@ The configuration is a simple proxy redirect to a backend url:
               "virtual_hosts": [
                 {
                   "name": "app_backend",
-                  "domains": ["*"],
+                  "domains": [
+                    "*"
+                  ],
                   "routes": [
                     {
                       "timeout_ms": 0,
@@ -90,6 +92,7 @@ The configuration is a simple proxy redirect to a backend url:
   }
 }
 
+
 ```
 
 **Step 4: Add Dockerfile for Front End Envoy Gateway**
@@ -126,7 +129,9 @@ First create an Envoy config that will act as a Back End proxy server:
               "virtual_hosts": [
                 {
                   "name": "app",
-                  "domains": ["*"],
+                  "domains": [
+                    "*"
+                  ],
                   "routes": [
                     {
                       "timeout_ms": 0,
@@ -169,16 +174,16 @@ First create an Envoy config that will act as a Back End proxy server:
   }
 }
 
+
 ```
 
-**Step 6 Add Dockerfile for BackEnd Envoy Gateway**
+**Step 6 Add Dockerfile for Backend Envoy Gateway**
 
 ```bash
 $ touch DockerFile
 $ cat <<EOF > DockerFile
     FROM envoyproxy/envoy:latest
-    
-    ARG PIP_REQUIREMENTS_FILE=requirements.txt
+
 
     RUN apt-get update && apt-get -q install -y \
         curl \
@@ -194,9 +199,10 @@ $ cat <<EOF > DockerFile
     COPY . /code
     WORKDIR /code
     
-    RUN pip3 install -r $PIP_REQUIREMENTS_FILE
+    RUN pip3 install -r ./requirements.txt
     ADD ./start_service.sh /usr/local/bin/start_service.sh
     RUN chmod u+x /usr/local/bin/start_service.sh
+    
     ENTRYPOINT /usr/local/bin/start_service.sh
 EOF
 ```
@@ -207,9 +213,8 @@ add also a start up shell for your app
 $ touch start_service.sh
 $ cat <<EOF > start_service.sh
     #!/bin/bash
-    set -e
-    python3 /code/app.py &
-    envoy -c /etc/app-service-envoy.json --service-cluster service ${SERVICE_NAME}
+    set -xe
+    python3 ./app.py & envoy -c /etc/app-service-envoy.json --service-cluster app
 EOF
 
 ```
@@ -225,7 +230,7 @@ services:
   front-envoy:
     build:
       context: .
-      dockerfile: app/DockerFile
+      dockerfile: gateway/Dockerfile
     volumes:
       - ./gateway/front-proxy-envoy.json:/etc/front-proxy-envoy.json
     networks:
@@ -238,20 +243,21 @@ services:
       - "8001:8001"
 
   app:
-    build: ./app
+    build:
+      context: ./app
+      dockerfile: Dockerfile
     volumes:
-      - ./src/app-service-envoy.json:/etc/app-service-envoy.json
+      - ./app/app-service-envoy.json:/etc/app-service-envoy.json
     networks:
       envoymesh:
         aliases:
           - app
-    environment:
-      - SERVICE_NAME=app
     expose:
       - "80"
 
 networks:
   envoymesh: {}
+
 EOF
 ```
 
@@ -352,11 +358,36 @@ app_service_1      /bin/sh -c /usr/local/bin/ ...    Up       80/tcp
 front-proxy-envoy_1   /bin/sh -c /usr/local/bin/ ...    Up       0.0.0.0:8000->80/tcp, 0.0.0.0:8001->8001/tcp
 ```
 
-**Step 4: Test routing capabilities**
+**Step 11: Test routing capabilities**
 
 You can now send a request to services 
 via the front-envoy.
 
 ```bash
 curl -X GET -v $(docker-machine ip default):8000
+* Rebuilt URL to: 0.0.0.0:8000/
+*   Trying 0.0.0.0...
+* TCP_NODELAY set
+* Connected to 0.0.0.0 (0.0.0.0) port 8000 (#0)
+> GET / HTTP/1.1
+> Host: 0.0.0.0:8000
+> User-Agent: curl/7.54.0
+> Accept: */*
+> 
+< HTTP/1.1 200 OK
+< content-type: text/html; charset=utf-8
+< content-length: 24
+< server: envoy
+< date: Thu, 14 Dec 2017 08:51:39 GMT
+< x-envoy-upstream-service-time: 4
+< 
+* Connection #0 to host 0.0.0.0 left intact
+My awesome micro-service%                        
 ```
+
+**Step 12: Enjoy your micro-service and have some Beer 🍺🍺🍺**
+
+
+LICENCE
+---
+MIT @ Theo Despoudis

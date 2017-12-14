@@ -4,7 +4,7 @@ services:
   front-envoy:
     build:
       context: .
-      dockerfile: app/DockerFile
+      dockerfile: gateway/Dockerfile
     volumes:
       - ./gateway/front-proxy-envoy.json:/etc/front-proxy-envoy.json
     networks:
@@ -17,15 +17,15 @@ services:
       - "8001:8001"
 
   app:
-    build: ./app
+    build:
+      context: ./app
+      dockerfile: Dockerfile
     volumes:
-      - ./src/app-service-envoy.json:/etc/app-service-envoy.json
+      - ./app/app-service-envoy.json:/etc/app-service-envoy.json
     networks:
       envoymesh:
         aliases:
           - app
-    environment:
-      - SERVICE_NAME=app
     expose:
       - "80"
 
